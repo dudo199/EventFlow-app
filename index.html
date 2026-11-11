@@ -32,7 +32,7 @@ html,body{overscroll-behavior-y:contain;touch-action:pan-x pan-y}input,select,te
 .chip{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--ln);color:var(--mu);white-space:nowrap}
 .ok{color:var(--ok);border-color:var(--ok)}.wa{color:var(--wa);border-color:var(--wa)}.bad{color:var(--bad);border-color:var(--bad)}
 input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px;min-width:0;width:100%}
-.f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.f label{font-size:12px;color:var(--mu);display:block;margin-bottom:2px}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.f .sub label{opacity:.75}.f .sub input{font-size:14px;padding:8px 10px}.f input,.f select{min-width:0;width:100%;box-sizing:border-box}.f input[type=date],.f input[type=time]{-webkit-appearance:none;appearance:none;min-height:40px;text-align:left;display:block}.f input::-webkit-date-and-time-value{text-align:left}.f label{font-size:12px;color:var(--mu);display:block;margin-bottom:2px}
 button{font:inherit;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 12px;cursor:pointer}
 button.p{background:var(--ac);color:var(--bg);border-color:var(--ac)}button.x{padding:2px 8px;color:var(--mu)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--ln);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -193,6 +193,11 @@ let PT={x:0,y:0,on:false,rd:false};
 function doRefresh(){const e=document.getElementById('ptr');e.textContent='Updating…';e.style.display='block';try{save()}catch(x){}closeSw();setTimeout(()=>{render();e.style.display='none';toast('Updated',1500)},350)}
 document.addEventListener('touchstart',e=>{PT.on=scrollY<=0&&!V.pop&&!V.del&&e.touches.length==1;PT.rd=false;if(PT.on){PT.x=e.touches[0].clientX;PT.y=e.touches[0].clientY}},{passive:true});
 document.addEventListener('touchmove',e=>{if(!PT.on)return;const t=e.touches[0],dy=t.clientY-PT.y,dx=t.clientX-PT.x;if(scrollY>0||Math.abs(dx)>Math.abs(dy)){return}const el=document.getElementById('ptr');if(dy>12){PT.rd=dy>80;el.style.display='block';el.textContent=PT.rd?'Release to refresh':'Pull to refresh';el.style.top=Math.min(60,10+dy/3)+'px'}else el.style.display='none'},{passive:true});
+const BK={on:false};
+function goBack(){if(V.pop||V.del){V.pop=null;V.del=null;render();return}if(V.add||V.edit){V.add=false;V.edit='';render();return}
+if(V.tab=='jobs'&&V.job){go('jobs');return}if(!['home','jobs','avail','menu'].includes(V.tab)){go('menu');return}if(V.tab!='home')go('home')}
+document.addEventListener('touchstart',e=>{const t=e.touches[0];BK.on=e.touches.length==1&&t.clientX<=28;BK.x=t.clientX;BK.y=t.clientY;BK.t=Date.now()},{passive:true});
+document.addEventListener('touchend',e=>{if(!BK.on)return;BK.on=false;const t=e.changedTouches[0],dx=t.clientX-BK.x,dy=Math.abs(t.clientY-BK.y);if(dx>70&&dx>dy*1.5&&Date.now()-BK.t<700){PT.on=false;PT.rd=false;const el=document.getElementById('ptr');if(el)el.style.display='none';goBack()}});
 document.addEventListener('touchend',()=>{if(!PT.on)return;PT.on=false;const el=document.getElementById('ptr');if(PT.rd){PT.rd=false;doRefresh()}else el.style.display='none'});
 let SW={x:0,y:0,el:null,dx:0,dir:'',open:null};
 function swTapE(k,id){if(SW.moved){SW.moved=false;return}if(SW.open){closeSw();return}if(k=='cview'||k=='ttview'||k=='tdedit'){V.pop={k,id};render()}else openEdit({k,id})}
@@ -316,11 +321,11 @@ function delAssign(jid,tid,i){J(jid).tasks.find(x=>x.id==tid).assign.splice(i,1)
 
 function jobForm(j){const st=['Meeting','Quoted','Confirmed','Delivered','Invoiced','Paid'];return`<div class="f"><div><label>Client</label><select onchange="pickClient(${j.id},this.value)"><option value="">${j.cid||!j.client||j.client=='New client'?'Select client':esc(j.client)+' (not linked)'}</option>${S.contacts.filter(c=>c.isCl||c.id==j.cid).map(c=>`<option value="${c.id}" ${c.id==j.cid?'selected':''}>${esc(c.name)}</option>`).join('')}<option value="new">+ New client…</option></select></div>
 <div><label>Event</label><input value="${esc(j.event)}" onchange="setq(${j.id},'event',this.value)"></div>
-<div style="grid-column:1/-1"><label style="color:var(--tx);font-weight:600">Event date</label><input type="date" style="font-size:18px;font-weight:600;padding:12px" value="${j.date}" onchange="setq(${j.id},'date',this.value)"></div>
-<div><label>Starts</label><input type="time" style="font-size:15px" value="${j.time||''}" onchange="setq(${j.id},'time',this.value)"></div>
-<div><label>Ends</label><input type="time" style="font-size:15px" value="${j.tEnd||''}" onchange="setq(${j.id},'tEnd',this.value)"></div>
-<div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="font-size:11px;opacity:.75">Setup date</label><input type="date" style="font-size:13px;padding:6px 8px" value="${j.sDate||''}" onchange="setq(${j.id},'sDate',this.value)"></div>
-<div><label style="font-size:11px;opacity:.75">Setup time</label><input type="time" style="font-size:13px;padding:6px 8px" value="${j.sTime||''}" onchange="setq(${j.id},'sTime',this.value)"></div></div>
+<div style="grid-column:1/-1"><label style="color:var(--tx);font-weight:500">Event date</label><input type="date" style="font-weight:500" value="${j.date}" onchange="setq(${j.id},'date',this.value)"></div>
+<div><label>Starts</label><input type="time" value="${j.time||''}" onchange="setq(${j.id},'time',this.value)"></div>
+<div><label>Ends</label><input type="time" value="${j.tEnd||''}" onchange="setq(${j.id},'tEnd',this.value)"></div>
+<div class="sub"><label>Setup date</label><input type="date" value="${j.sDate||''}" onchange="setq(${j.id},'sDate',this.value)"></div>
+<div class="sub"><label>Setup time</label><input type="time" value="${j.sTime||''}" onchange="setq(${j.id},'sTime',this.value)"></div>
 <div style="grid-column:1/-1"><datalist id="vnl">${(S.venues||[]).map(v=>`<option value="${esc(v.name)}">`).join('')}</datalist><label>Location</label><input list="vnl" value="${esc(j.loc||'')}" placeholder="Venue or address" onchange="setq(${j.id},'loc',this.value.trim())"></div>
 <div><label>Status</label><select onchange="set(${j.id},'status',this.value)">${st.map(s=>`<option ${s==j.status?'selected':''}>${s}</option>`).join('')}</select></div>
 <div><label>${isBk(j)?'Income (€)':'Final quote value (€)'}</label><input type="number" value="${j.quote}" onchange="setq(${j.id},'quote',this.value)"></div>
