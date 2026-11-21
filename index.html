@@ -1360,22 +1360,25 @@ function monthReport(ym){const real=S.jobs.filter(j=>!j.friend&&j.status!='Meeti
 const val=j=>{const c=calc(j);return{net:c.rev,gross:c.rev+c.vatAmt,est:c.est}};
 const toInv=inM.filter(j=>stgIx(j)<4&&!isUp(j)),unpaid=inM.filter(j=>j.status=='Invoiced'),paid=inM.filter(j=>j.status=='Paid'),open=inM.filter(j=>isUp(j)),older=real.filter(j=>j.date<ym+'-01'&&stgIx(j)<4&&!isUp(j)).sort((a,b)=>a.date<b.date?-1:1);
 const sum=a=>a.reduce((x,j)=>x+val(j).net,0);
-return{ym,jobs:inM,toInv,unpaid,paid,open,older,toInvAmt:sum(toInv),unpaidAmt:unpaid.reduce((x,j)=>x+val(j).gross,0),paidAmt:paid.reduce((x,j)=>x+val(j).gross,0),total:sum(inM),val}}
+const fr=S.jobs.filter(j=>j.friend&&j.status!='Meeting'&&j.date.slice(0,7)==ym).sort((a,b)=>a.date<b.date?-1:1);
+return{ym,fr,frAmt:fr.reduce((x,j)=>x+val(j).net,0),jobs:inM,toInv,unpaid,paid,open,older,toInvAmt:sum(toInv),unpaidAmt:unpaid.reduce((x,j)=>x+val(j).gross,0),paidAmt:paid.reduce((x,j)=>x+val(j).gross,0),total:sum(inM),val}}
 function reportView(){const ym=V.rm||lastMonth(),r=monthReport(ym);if(ym==lastMonth())S.rptSeen=ym;
 const line=(j,extra)=>{const v=r.val(j);return`<div class="li tap" onclick="go('jobs',${j.id})"><div class="row"><span style="min-width:0"><b>${esc(jt(j))}</b><div class="mu">${fd(j.date)}${j.event?' · '+esc(j.client):''}${isBk(j)?' · booking':''}${extra?' · '+extra:''}</div></span><span style="text-align:right;white-space:nowrap"><b>${v.est?'≈ ':''}${m(v.net)}</b><div class="mu">${stgName(j)}${j.invNo||(j.docs&&j.docs.invoice&&j.docs.invoice.no)?' · '+esc(j.invNo||j.docs.invoice.no):''}</div></span></div></div>`};
 const sec=(h,l,c,empty)=>`<h2 ${c?'style="color:var(--'+c+')"':''}>${h}${l.length?' · '+l.length:''}</h2>${l.length?`<div class="card grp">${l.map(j=>line(j)).join('')}</div>`:`<div class="mu" style="margin:0 2px">${empty}</div>`}`;
 return`<div class="row"><h1 style="margin:0">Monthly report</h1><span style="display:flex;gap:6px"><button class="x" style="font-size:16px" aria-label="Previous month" onclick="V.rm=shiftYm('${ym}',-1);render()">‹</button><button class="x" style="font-size:16px" aria-label="Next month" onclick="V.rm=shiftYm('${ym}',1);render()">›</button></span></div>
 <div class="mu" style="margin:2px 0 12px">${mName(ym)} · amounts excl. VAT${r.toInv.some(j=>r.val(j).est)?' · ≈ means estimated from equipment and tasks':''}</div>
 <div class="card grp gl">${[['Jobs',r.jobs.length,m(r.total)+' total'],['To invoice',r.toInv.length,m(r.toInvAmt)],['Invoiced, unpaid',r.unpaid.length,m(r.unpaidAmt)+' incl. VAT'],['Paid',r.paid.length,m(r.paidAmt)+' incl. VAT']].map(([l,v,s])=>`<div><div class="mu" style="font-size:12px">${l}</div><div style="font-size:16px;font-weight:600;margin:1px 0">${v}</div><div class="mu" style="font-size:12px">${s}</div></div>`).join('')}</div>
+<div style="margin-top:10px">${chk(!!S.rptFr,"S.rptFr=this.checked;render()",'Include friendly jobs'+(r.fr.length?' ('+r.fr.length+')':''))}</div>
 <div style="display:flex;gap:8px;margin-top:10px"><button class="p" style="flex:1" onclick="reportPdf('${ym}')">Preview PDF</button><button style="flex:1" onclick="reportText('${ym}')">Copy as text</button></div>
 ${sec('To invoice',r.toInv,r.toInv.length?'wa':'','Everything from this month is invoiced.')}
 ${sec('Invoiced, awaiting payment',r.unpaid,'','Nothing outstanding.')}
 ${sec('Paid',r.paid,'','No payments received for this month yet.')}
 ${r.open.length?sec('Not finished yet',r.open,'','') :''}
-${r.older.length?sec('Older jobs still not invoiced',r.older,'bad',''):''}`}
+${r.older.length?sec('Older jobs still not invoiced',r.older,'bad',''):''}
+${S.rptFr?sec('Friendly jobs',r.fr,'','No friendly jobs this month.')+(r.fr.length?`<div class="mu" style="margin:6px 2px;font-size:12px">Not counted in the totals above · ${m(r.frAmt)} at their own value.</div>`:''):''}`}
 function reportLines(ym){const r=monthReport(ym),f=j=>`${fd(j.date)}  ${jt(j)}${j.event?' ('+j.client+')':''}  ${r.val(j).est?'~':''}${m(r.val(j).net)}  ${stgName(j)}${j.invNo?' '+j.invNo:''}`;
 const g=(h,l)=>l.length?[h.toUpperCase(),...l.map(f),'']:[];
-return[`Monthly report · ${mName(ym)}`,`${r.jobs.length} jobs · ${m(r.total)} excl. VAT`,'',...g('To invoice ('+m(r.toInvAmt)+')',r.toInv),...g('Invoiced, awaiting payment',r.unpaid),...g('Paid',r.paid),...g('Not finished yet',r.open),...g('Older jobs still not invoiced',r.older)]}
+return[`Monthly report · ${mName(ym)}`,`${r.jobs.length} jobs · ${m(r.total)} excl. VAT`,'',...g('To invoice ('+m(r.toInvAmt)+')',r.toInv),...g('Invoiced, awaiting payment',r.unpaid),...g('Paid',r.paid),...g('Not finished yet',r.open),...g('Older jobs still not invoiced',r.older),...(S.rptFr?g('Friendly jobs (not in totals)',r.fr):[])]}
 async function reportText(ym){const t=reportLines(ym).join('\n');try{if(navigator.share)await navigator.share({title:'Monthly report',text:t});else{await navigator.clipboard.writeText(t);toast('Copied.')}}catch(e){try{await navigator.clipboard.writeText(t);toast('Copied.')}catch(x){toast('Could not copy.')}}}
 async function reportPdf(ym){const f=await reportFile(ym);if(f)pvOpen(f,{k:'pv',act:'report',title:'Monthly report · '+mName(ym),note:'Check it over, then share or save.'})}
 async function reportFile(ym){try{await pdfLibs()}catch(e){toast(e.message);return null}const r=monthReport(ym),d=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
@@ -1386,7 +1389,7 @@ T((BZ().name||'EventFlow')+' · Monthly report',L,y,{b:true,s:14});y+=7;T(mName(
 const tiles=[['Jobs',r.jobs.length+' · '+m(r.total)],['To invoice',r.toInv.length+' · '+m(r.toInvAmt)],['Invoiced, unpaid',r.unpaid.length+' · '+m(r.unpaidAmt)+' incl. VAT'],['Paid',r.paid.length+' · '+m(r.paidAmt)+' incl. VAT']];
 tiles.forEach(([a,b],i)=>{const x=L+(i%2)*87,yy=y+Math.floor(i/2)*8;T(a,x,yy,{c:MU,s:8.5});T(b,x,yy+4,{b:true})});y+=22;
 const grp=(h,l,c)=>{if(!l.length)return;nl();T(h.toUpperCase(),L,y,{b:true,s:8.5,c:c||MU});y+=5.5;l.forEach(j=>{nl();const v=r.val(j);T(fd(j.date),L,y,{c:MU,s:8.5});T(jt(j)+(j.event?'  ·  '+j.client:''),L+24,y,{});T((v.est?'≈ ':'')+m(v.net),R-30,y,{a:'right',b:true});T(stgName(j)+(j.invNo?' '+j.invNo:''),R,y,{a:'right',c:MU,s:8.5});y+=5.2});y+=5};
-grp('To invoice',r.toInv,[176,96,0]);grp('Invoiced, awaiting payment',r.unpaid);grp('Paid',r.paid);grp('Not finished yet',r.open);grp('Older jobs still not invoiced',r.older,[180,40,40]);
+grp('To invoice',r.toInv,[176,96,0]);grp('Invoiced, awaiting payment',r.unpaid);grp('Paid',r.paid);grp('Not finished yet',r.open);grp('Older jobs still not invoiced',r.older,[180,40,40]);if(S.rptFr)grp('Friendly jobs (not in totals)',r.fr);
 return new File([d.output('blob')],'report-'+ym+'.pdf',{type:'application/pdf'})}
 
 // ==== Prep checklist defaults editor ====
