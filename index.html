@@ -1356,18 +1356,34 @@ V.pop=null;render()}
 const lastMonth=()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
 const mName=ym=>new Date(ym+'-01T12:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 const shiftYm=(ym,n)=>{const [y,mo]=ym.split('-').map(Number),d=new Date(y,mo-1+n,1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
+function monthPL(ym){const done=S.jobs.filter(j=>!j.friend&&j.status!='Meeting'&&j.date.slice(0,7)==ym&&!isUp(j)),cs=done.map(j=>[j,calc(j)]),sm=f=>cs.reduce((a,x)=>a+f(x[1]),0);
+const rev=sm(c=>c.rev),crew=sm(c=>c.cc),me=sm(c=>c.me),out=sm(c=>c.oc),p=sm(c=>c.p);
+const inM=d=>String(d||'').slice(0,7)==ym,received=S.jobs.filter(j=>!j.friend&&inM(j.pDate)).reduce((a,j)=>{const c=calc(j);return a+c.rev+c.vatAmt},0),
+paidCrew=(S.payments||[]).filter(x=>inM(x.date)&&!isMe(x.c)).reduce((a,x)=>a+(+x.amt||0),0),vat=sm(c=>c.vatAmt),
+sorted=[...cs].sort((a,b)=>b[1].p-a[1].p);
+return{n:done.length,rev,crew,me,meCounted:!S.meFree,out,p,mg:rev?p/rev*100:0,hrs:sm(c=>c.hrs),mh:sm(c=>c.mh),received,paidCrew,vat,est:cs.filter(x=>x[1].est).length,best:sorted[0],worst:sorted.length>1?[...cs].sort((a,b)=>a[1].pc-b[1].pc)[0]:null}}
 function monthReport(ym){const real=S.jobs.filter(j=>!j.friend&&j.status!='Meeting'),inM=real.filter(j=>j.date.slice(0,7)==ym).sort((a,b)=>a.date<b.date?-1:1),endOf=ym+'-31';
 const val=j=>{const c=calc(j);return{net:c.rev,gross:c.rev+c.vatAmt,est:c.est}};
 const toInv=inM.filter(j=>stgIx(j)<4&&!isUp(j)),unpaid=inM.filter(j=>j.status=='Invoiced'),paid=inM.filter(j=>j.status=='Paid'),open=inM.filter(j=>isUp(j)),older=real.filter(j=>j.date<ym+'-01'&&stgIx(j)<4&&!isUp(j)).sort((a,b)=>a.date<b.date?-1:1);
 const sum=a=>a.reduce((x,j)=>x+val(j).net,0);
 const fr=S.jobs.filter(j=>j.friend&&j.status!='Meeting'&&j.date.slice(0,7)==ym).sort((a,b)=>a.date<b.date?-1:1);
-return{ym,fr,frAmt:fr.reduce((x,j)=>x+val(j).net,0),jobs:inM,toInv,unpaid,paid,open,older,toInvAmt:sum(toInv),unpaidAmt:unpaid.reduce((x,j)=>x+val(j).gross,0),paidAmt:paid.reduce((x,j)=>x+val(j).gross,0),total:sum(inM),val}}
+return{ym,pl:monthPL(ym),plPrev:monthPL(shiftYm(ym,-1)),plYear:monthPL(shiftYm(ym,-12)),fr,frAmt:fr.reduce((x,j)=>x+val(j).net,0),jobs:inM,toInv,unpaid,paid,open,older,toInvAmt:sum(toInv),unpaidAmt:unpaid.reduce((x,j)=>x+val(j).gross,0),paidAmt:paid.reduce((x,j)=>x+val(j).gross,0),total:sum(inM),val}}
 function reportView(){const ym=V.rm||lastMonth(),r=monthReport(ym);if(ym==lastMonth())S.rptSeen=ym;
 const line=(j,extra)=>{const v=r.val(j);return`<div class="li tap" onclick="go('jobs',${j.id})"><div class="row"><span style="min-width:0"><b>${esc(jt(j))}</b><div class="mu">${fd(j.date)}${j.event?' · '+esc(j.client):''}${isBk(j)?' · booking':''}${extra?' · '+extra:''}</div></span><span style="text-align:right;white-space:nowrap"><b>${v.est?'≈ ':''}${m(v.net)}</b><div class="mu">${stgName(j)}${j.invNo||(j.docs&&j.docs.invoice&&j.docs.invoice.no)?' · '+esc(j.invNo||j.docs.invoice.no):''}</div></span></div></div>`};
 const sec=(h,l,c,empty)=>`<h2 ${c?'style="color:var(--'+c+')"':''}>${h}${l.length?' · '+l.length:''}</h2>${l.length?`<div class="card grp">${l.map(j=>line(j)).join('')}</div>`:`<div class="mu" style="margin:0 2px">${empty}</div>`}`;
 return`<div class="row"><h1 style="margin:0">Monthly report</h1><span style="display:flex;gap:6px"><button class="x" style="font-size:16px" aria-label="Previous month" onclick="V.rm=shiftYm('${ym}',-1);render()">‹</button><button class="x" style="font-size:16px" aria-label="Next month" onclick="V.rm=shiftYm('${ym}',1);render()">›</button></span></div>
 <div class="mu" style="margin:2px 0 12px">${mName(ym)} · amounts excl. VAT${r.toInv.some(j=>r.val(j).est)?' · ≈ means estimated from equipment and tasks':''}</div>
 <div class="card grp gl">${[['Jobs',r.jobs.length,m(r.total)+' total'],['To invoice',r.toInv.length,m(r.toInvAmt)],['Invoiced, unpaid',r.unpaid.length,m(r.unpaidAmt)+' incl. VAT'],['Paid',r.paid.length,m(r.paidAmt)+' incl. VAT']].map(([l,v,s])=>`<div><div class="mu" style="font-size:12px">${l}</div><div style="font-size:16px;font-weight:600;margin:1px 0">${v}</div><div class="mu" style="font-size:12px">${s}</div></div>`).join('')}</div>
+${(()=>{const P=r.pl,pv=r.plPrev,py=r.plYear,kv=(l,v,c,sub)=>`<div class="li"><div class="row"><span class="mu">${l}</span><b style="${c?'color:'+c:''}">${v}</b></div>${sub?`<div class="mu" style="font-size:12px;text-align:right">${sub}</div>`:''}</div>`;
+const dl=(a,b,lab)=>b?`<span style="color:${a>=b?'var(--ok)':'var(--bad)'}">${a>=b?'▲':'▼'} ${Math.abs(Math.round((a-b)/Math.abs(b)*100))}%</span> vs ${lab}`:'';
+if(!P.n)return`<h2>Profit &amp; loss</h2><div class="card"><div class="mu">No finished jobs in ${mName(ym)}.</div></div>`;
+return`<h2>Profit &amp; loss · ${P.n} finished job${P.n==1?'':'s'}</h2><div class="card grp">${kv('Revenue (excl. VAT)',m(P.rev),'',[dl(P.rev,pv.rev,'last month'),dl(P.rev,py.rev,'a year ago')].filter(Boolean).join(' · '))}
+${kv('Crew pay','−'+m(P.crew)+(P.hrs?' <span class="mu">· '+P.hrs+' h</span>':''))}${P.me||P.mh?kv('Your time'+(P.meCounted?'':' (not counted)'),(P.meCounted?'−':'')+m(P.me)+(P.mh?' <span class="mu">· '+P.mh+' h</span>':'')):''}${kv('Outsourced equipment','−'+m(P.out))}
+${kv('Profit',m(P.p)+' <span class="mu">· '+Math.round(P.mg)+'%</span>',P.p<0?'var(--bad)':'var(--ok)',[dl(P.p,pv.p,'last month'),dl(P.p,py.p,'a year ago')].filter(Boolean).join(' · '))}
+${P.mh?kv('Per hour of your time',m((P.p+(P.meCounted?P.me:0))/P.mh)):''}</div>
+${P.est?`<div class="mu" style="margin:6px 2px;font-size:12px">${P.est} job${P.est==1?' has':'s have'} no quote yet, so ${P.est==1?'its':'their'} revenue is estimated from equipment and tasks.</div>`:''}
+<h2>Cash this month</h2><div class="card grp">${kv('Received from clients',m(P.received),'','incl. VAT, by date marked paid')}${kv('Paid to crew',m(P.paidCrew))}${kv('VAT on finished jobs',m(P.vat))}</div>
+${P.best&&P.worst&&P.best[0].id!=P.worst[0].id?`<h2>Highlights</h2><div class="card grp"><div class="li tap" onclick="go('jobs',${P.best[0].id})"><div class="row"><span><span class="mu">Most profitable</span><br><b>${esc(jt(P.best[0]))}</b></span><b>${m(P.best[1].p)}</b></div></div><div class="li tap" onclick="go('jobs',${P.worst[0].id})"><div class="row"><span><span class="mu">Lowest margin</span><br><b>${esc(jt(P.worst[0]))}</b></span><b style="color:${P.worst[1].pc<25?'var(--bad)':'inherit'}">${Math.round(P.worst[1].pc)}%</b></div></div></div>`:''}`})()}
 <div style="margin-top:10px">${chk(!!S.rptFr,"S.rptFr=this.checked;render()",'Include friendly jobs'+(r.fr.length?' ('+r.fr.length+')':''))}</div>
 <div style="display:flex;gap:8px;margin-top:10px"><button class="p" style="flex:1" onclick="reportPdf('${ym}')">Preview PDF</button><button style="flex:1" onclick="reportText('${ym}')">Copy as text</button></div>
 ${sec('To invoice',r.toInv,r.toInv.length?'wa':'','Everything from this month is invoiced.')}
@@ -1378,7 +1394,8 @@ ${r.older.length?sec('Older jobs still not invoiced',r.older,'bad',''):''}
 ${S.rptFr?sec('Friendly jobs',r.fr,'','No friendly jobs this month.')+(r.fr.length?`<div class="mu" style="margin:6px 2px;font-size:12px">Not counted in the totals above · ${m(r.frAmt)} at their own value.</div>`:''):''}`}
 function reportLines(ym){const r=monthReport(ym),f=j=>`${fd(j.date)}  ${jt(j)}${j.event?' ('+j.client+')':''}  ${r.val(j).est?'~':''}${m(r.val(j).net)}  ${stgName(j)}${j.invNo?' '+j.invNo:''}`;
 const g=(h,l)=>l.length?[h.toUpperCase(),...l.map(f),'']:[];
-return[`Monthly report · ${mName(ym)}`,`${r.jobs.length} jobs · ${m(r.total)} excl. VAT`,'',...g('To invoice ('+m(r.toInvAmt)+')',r.toInv),...g('Invoiced, awaiting payment',r.unpaid),...g('Paid',r.paid),...g('Not finished yet',r.open),...g('Older jobs still not invoiced',r.older),...(S.rptFr?g('Friendly jobs (not in totals)',r.fr):[])]}
+const P=r.pl,plT=P.n?['PROFIT & LOSS ('+P.n+' finished jobs)','Revenue (excl. VAT)  '+m(P.rev),'Crew pay  -'+m(P.crew),...(P.me&&P.meCounted?['Your time  -'+m(P.me)]:[]),'Outsourced equipment  -'+m(P.out),'Profit  '+m(P.p)+' ('+Math.round(P.mg)+'%)','','CASH','Received from clients  '+m(P.received)+' incl. VAT','Paid to crew  '+m(P.paidCrew),'VAT on finished jobs  '+m(P.vat),'']:[];
+return[`Monthly report · ${mName(ym)}`,`${r.jobs.length} jobs · ${m(r.total)} excl. VAT`,'',...plT,...g('To invoice ('+m(r.toInvAmt)+')',r.toInv),...g('Invoiced, awaiting payment',r.unpaid),...g('Paid',r.paid),...g('Not finished yet',r.open),...g('Older jobs still not invoiced',r.older),...(S.rptFr?g('Friendly jobs (not in totals)',r.fr):[])]}
 async function reportText(ym){const t=reportLines(ym).join('\n');try{if(navigator.share)await navigator.share({title:'Monthly report',text:t});else{await navigator.clipboard.writeText(t);toast('Copied.')}}catch(e){try{await navigator.clipboard.writeText(t);toast('Copied.')}catch(x){toast('Could not copy.')}}}
 async function reportPdf(ym){const f=await reportFile(ym);if(f)pvOpen(f,{k:'pv',act:'report',title:'Monthly report · '+mName(ym),note:'Check it over, then share or save.'})}
 async function reportFile(ym){try{await pdfLibs()}catch(e){toast(e.message);return null}const r=monthReport(ym),d=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
@@ -1388,6 +1405,12 @@ const nl=(h)=>{if(y>275){d.addPage();y=22}};
 T((BZ().name||'EventFlow')+' · Monthly report',L,y,{b:true,s:14});y+=7;T(mName(ym)+' · generated '+fd(today())+' · amounts excl. VAT',L,y,{c:MU});y+=10;
 const tiles=[['Jobs',r.jobs.length+' · '+m(r.total)],['To invoice',r.toInv.length+' · '+m(r.toInvAmt)],['Invoiced, unpaid',r.unpaid.length+' · '+m(r.unpaidAmt)+' incl. VAT'],['Paid',r.paid.length+' · '+m(r.paidAmt)+' incl. VAT']];
 tiles.forEach(([a,b],i)=>{const x=L+(i%2)*87,yy=y+Math.floor(i/2)*8;T(a,x,yy,{c:MU,s:8.5});T(b,x,yy+4,{b:true})});y+=22;
+const P=r.pl;if(P.n){T('PROFIT & LOSS · '+P.n+' FINISHED JOB'+(P.n==1?'':'S'),L,y,{b:true,s:8.5,c:MU});y+=5.5;
+const row=(a,b,o)=>{o=o||{};T(a,L,y,{c:o.c||INK});T(b,R-60,y,{a:'right',b:o.b});y+=5.2};
+row('Revenue (excl. VAT)',m(P.rev));row('Crew pay'+(P.hrs?' ('+P.hrs+' h)':''),'−'+m(P.crew));if(P.me&&P.meCounted)row('Your time'+(P.mh?' ('+P.mh+' h)':''),'−'+m(P.me));row('Outsourced equipment','−'+m(P.out));
+d.setDrawColor(214,213,208);d.line(L,y-3.2,R-60,y-3.2);row('Profit · '+Math.round(P.mg)+'% margin',m(P.p),{b:true});
+if(r.plPrev.p)T('Profit '+(P.p>=r.plPrev.p?'up ':'down ')+Math.abs(Math.round((P.p-r.plPrev.p)/Math.abs(r.plPrev.p)*100))+'% on last month ('+m(r.plPrev.p)+')',L,y,{c:MU,s:8.5}),y+=5.2;y+=3;
+T('CASH THIS MONTH',L,y,{b:true,s:8.5,c:MU});y+=5.5;row('Received from clients (incl. VAT)',m(P.received));row('Paid to crew',m(P.paidCrew));row('VAT on finished jobs',m(P.vat));y+=4}
 const grp=(h,l,c)=>{if(!l.length)return;nl();T(h.toUpperCase(),L,y,{b:true,s:8.5,c:c||MU});y+=5.5;l.forEach(j=>{nl();const v=r.val(j);T(fd(j.date),L,y,{c:MU,s:8.5});T(jt(j)+(j.event?'  ·  '+j.client:''),L+24,y,{});T((v.est?'≈ ':'')+m(v.net),R-30,y,{a:'right',b:true});T(stgName(j)+(j.invNo?' '+j.invNo:''),R,y,{a:'right',c:MU,s:8.5});y+=5.2});y+=5};
 grp('To invoice',r.toInv,[176,96,0]);grp('Invoiced, awaiting payment',r.unpaid);grp('Paid',r.paid);grp('Not finished yet',r.open);grp('Older jobs still not invoiced',r.older,[180,40,40]);if(S.rptFr)grp('Friendly jobs (not in totals)',r.fr);
 return new File([d.output('blob')],'report-'+ym+'.pdf',{type:'application/pdf'})}
