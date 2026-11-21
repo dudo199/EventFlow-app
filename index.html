@@ -21,7 +21,7 @@ h1{font-size:20px;margin:4px 0 14px;font-weight:600}h2{font-size:13px;text-trans
 .card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px;margin-bottom:8px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}.mu{color:var(--mu);font-size:13px}
 .sw{position:relative;overflow:hidden;border-radius:12px;margin-bottom:8px}.sw .card{margin:0;position:relative;transition:transform .2s;touch-action:pan-y;user-select:none;-webkit-user-select:none}.swa{visibility:hidden;position:absolute;right:0;top:0;bottom:0;display:flex}.sw.on .swa{visibility:visible}.swa button{width:80px;border:0;border-radius:0;font-size:13px;background:var(--ln);color:var(--tx)}.swa button.d{background:var(--bad);color:#fff}
-.sheet.big{width:min(760px,94vw);max-width:none;padding:12px}.dvf{display:block;width:100%;height:60vh;border:0;border-radius:8px;background:#fff}.dvs{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:8px 0;font-size:13px}.dvs b{font-weight:600}.dvb{display:flex;gap:8px;flex-wrap:wrap}.dvb button{flex:1;padding:7px 4px;font-size:13px;white-space:nowrap}.dvb a{color:inherit}.sheet.wide{left:auto;right:24px;transform:translateY(-50%);width:480px}
+.sheet.big{width:min(760px,94vw);max-width:none;padding:12px}.dvf{display:block;width:100%;height:60vh;border:0;border-radius:8px;background:#fff}.pvb{height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:8px;padding:8px}.pvb canvas{width:100%;display:block;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.15);margin-bottom:8px}.pvb .dvf{height:100%}.dvs{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:8px 0;font-size:13px}.dvs b{font-weight:600}.dvb{display:flex;gap:8px;flex-wrap:wrap}.dvb button{flex:1;padding:7px 4px;font-size:13px;white-space:nowrap}.dvb a{color:inherit}.sheet.wide{left:auto;right:24px;transform:translateY(-50%);width:480px}
 .pdfp{position:fixed;left:24px;top:24px;bottom:24px;right:540px;z-index:6;background:var(--card);border:1px solid var(--ln);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .pdfo{position:fixed;left:12px;right:12px;top:12px;bottom:12px;z-index:7;background:var(--card);border:1px solid var(--ln);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .pdfp iframe,.pdfo iframe{flex:1;border:0;width:100%;background:#fff}
@@ -181,7 +181,8 @@ return`<h1>Task list</h1>`+quickAdd('qt','Add task type…','qaTT',"V.pop={k:'tt
 function render(){PC={};if(!S.taskTypes)seedTT();
 const T=[['home','Home'],['jobs','Jobs'],['avail','Calendar'],['menu','Menu']],inMenu=['menu','gear','crew','pay','venues','tasks','contacts','profit','biz','todo','report','prept'];
 nav.innerHTML=T.map(([k,l])=>`<button class="${V.tab==k||(k=='menu'&&inMenu.includes(V.tab))?'on':''}" onclick="go('${k}')">${NI[k]||''}${l}</button>`).join('');
-app.innerHTML=({prept:preptView,report:reportView,todo:todoView,biz:bizView,venues:venuesView,tasks:tasksView,home:homeView,pay:payView,jobs:V.job?jobView:jobsView,avail:availView,gear:gearView,crew:crewView,menu:menuView,contacts:contactsView,profit:profitView})[V.tab]()+popup()+delDlg();app.querySelectorAll('input[type=number]').forEach(i=>{if(!i.getAttribute('step')){i.step='any';i.inputMode='decimal'}});if(V.qaf){const e=document.getElementById(V.qaf);V.qaf='';if(e){e.value='';e.focus()}}save()}
+app.innerHTML=({prept:preptView,report:reportView,todo:todoView,biz:bizView,venues:venuesView,tasks:tasksView,home:homeView,pay:payView,jobs:V.job?jobView:jobsView,avail:availView,gear:gearView,crew:crewView,menu:menuView,contacts:contactsView,profit:profitView})[V.tab]()+popup()+delDlg();app.querySelectorAll('input[type=number]').forEach(i=>{if(!i.getAttribute('step')){i.step='any';i.inputMode='decimal'}});{const b=document.getElementById('pvbox');if(b&&!b.dataset.p&&_pvf)pdfPaint(b,_pvf,_pvu)}
+if(V.qaf){const e=document.getElementById(V.qaf);V.qaf='';if(e){e.value='';e.focus()}}save()}
 const today=()=>{const n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())};
 // A job ends at its end time; if that is earlier than the start time it runs past midnight into the next day.
 // No end time: night starts (17:00 or later) are assumed to run until 06:00 next day; otherwise end of the event day.
@@ -488,6 +489,8 @@ return top(o.id?'Edit venue':'New venue')+`<div class="f"><div style="grid-colum
 <div class="f"><div style="grid-column:1/-1"><label>Notes</label><textarea rows="3" style="font:inherit;width:100%;padding:8px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx)" placeholder="Power, loading access, parking…" onchange="vSet('notes',this.value)">${esc(d.notes||'')}</textarea></div></div>
 <button class="p" style="width:100%;margin-top:10px" onclick="vSave()">Save</button>${o.id?`<button class="dng" style="width:100%;margin-top:8px" onclick="V.pop=null;askDel('venue',${o.id})">Delete venue</button>`:''}</div>`}
 if(V.pop.k=='tdnew'||V.pop.k=='tdedit')return tdSheet(top);
+if(V.pop.k=='pv'){const o=V.pop;return top(esc(o.title)).replace('<div class="sheet">','<div class="sheet big">')+`<div class="mu" style="margin-bottom:8px">${o.note||''}</div><div id="pvbox" class="pvb"><div class="mu" style="padding:8px">Preparing preview…</div></div>
+<div style="display:flex;gap:8px;margin-top:10px">${o.act=='mk'?`<button style="flex:1" onclick="V.pop=V.pop.ret;render()">← Back to edit</button><button class="p" style="flex:1" onclick="V.pop=V.pop.ret;render();mkGo()">Create PDF</button>`:`<button style="flex:1" onclick="V.pop=null;render()">Close</button><button class="p" style="flex:1" onclick="shareFile(_pvf)">Share or save</button>`}</div></div>`}
 if(V.pop.k=='mk')return top('Create '+V.pop.kind)+mkSheet();
 if(V.pop.k=='owed')return top('Owed to you')+owedSheet();
 if(V.pop.k=='merge')return mergePopup(top);
@@ -633,7 +636,7 @@ function openDv(jid,kind){_dvb=null;V.pop={k:'dv',j:jid,kind};render();loadDv()}
 async function loadDv(){const o=V.pop;if(!o||o.k!='dv')return;const j=J(o.j),kd=o.kind||(isBk(j)?'invoice':'quote'),d=(j.docs||{})[kd];if(!d||!d.pdf)return;
 try{const b=await idbGet(o.j+':'+kd);const box=document.getElementById('dvbox');if(!box||!V.pop||V.pop.k!='dv')return;
 if(!b){box.innerHTML='<div class="mu">The PDF is no longer stored in this browser. Upload it again.</div>';return}
-_dvb=b;if(_dvu)URL.revokeObjectURL(_dvu);_dvu=URL.createObjectURL(b);box.innerHTML='<iframe id="dvf" class="dvf" title="Uploaded PDF" src="'+_dvu+'"></iframe>';
+_dvb=b;if(_dvu)URL.revokeObjectURL(_dvu);_dvu=URL.createObjectURL(b);box.classList.add('pvb');await pdfPaint(box,b,_dvu);
 }catch(e){const box=document.getElementById('dvbox');if(box)box.innerHTML='<div class="mu">Could not open the saved PDF.</div>'}}
 function pickDoc(jid,kind){DK={jid,kind};const f=document.getElementById('docf');f.value='';f.click()}
 async function readDoc(f){if(!f||!DK)return;const tgt=DK;toast('Reading '+f.name+'…',0);
@@ -1251,7 +1254,20 @@ ${D.single?`<div style="grid-column:1/-1"><label>Description on the ${o.kind}</l
 <div class="sum">${D.vt!='none'?`<span class="mu">Subtotal (excl. VAT)</span><b>${m(D.net)}</b><span class="mu">VAT ${D.rate}%</span><b>${m(D.vat)}</b>`:''}<span>Total</span><b>${m(D.total)}</b></div></div>
 ${!D.single&&Math.abs(D.diff)>=0.005?`<div class="mu" style="margin-bottom:8px">The job's quote value differs from its lines by ${m(Math.abs(D.diff))}, shown as ${D.diff<0?'a discount':'an adjustment'} so the ${o.kind} adds up.</div>`:''}
 ${o.err?`<div style="color:var(--bad);margin-bottom:8px">${esc(o.err)}</div>`:''}
-<button class="p" style="width:100%" ${o.busy?'disabled':''} onclick="mkGo()">${o.busy?'Creating…':'Create PDF'}</button></div>`}
+<div style="display:flex;gap:8px"><button style="flex:1" ${o.busy?'disabled':''} onclick="mkPreview()">Preview</button><button class="p" style="flex:2" ${o.busy?'disabled':''} onclick="mkGo()">${o.busy?'Creating…':'Create PDF'}</button></div></div>`}
+let _pvf=null,_pvu=null;
+function pvOpen(file,pop){if(_pvu)URL.revokeObjectURL(_pvu);_pvf=file;_pvu=URL.createObjectURL(file);V.pop=pop;render()}
+// Draw every page with pdf.js so the preview scrolls on iPhone (a framed PDF there shows only page one). Falls back to a frame.
+async function pdfPaint(box,blob,url){if(!box)return;box.dataset.p='1';const frame=()=>{box.innerHTML=`<iframe class="dvf" title="PDF" src="${url||URL.createObjectURL(blob)}"></iframe>`};
+if(!window.pdfjsLib)return frame();try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const pd=await pdfjsLib.getDocument({data:await blob.arrayBuffer()}).promise,W=Math.max(280,box.clientWidth-16),dpr=Math.min(2,window.devicePixelRatio||1);box.innerHTML='';
+for(let i=1;i<=pd.numPages;i++){const pg=await pd.getPage(i),v1=pg.getViewport({scale:1}),vp=pg.getViewport({scale:W/v1.width*dpr}),cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);box.appendChild(cv);await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise}
+if(pd.numPages>1){const n=document.createElement('div');n.className='mu';n.style.cssText='text-align:center;font-size:12px';n.textContent=pd.numPages+' pages';box.appendChild(n)}}catch(e){frame()}}
+function shareFile(f){if(!f)return;if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:f.name}).catch(()=>{});else docDl(f)}
+async function mkPreview(){const o=V.pop;if(!o||o.k!='mk'||o.busy)return;const j=J(o.j),kind=o.kind;o.busy=true;o.err='';render();
+try{const D=docBuild(j,o.mode,o.desc),blob=await pdfMake(j,kind,{...D,no:String(o.no||'').trim()||'—',date:o.date||today(),due:o.due});o.busy=false;
+pvOpen(new File([blob],'preview.pdf',{type:'application/pdf'}),{k:'pv',act:'mk',ret:o,title:'Preview · '+kind,note:'Nothing is saved and no number is used until you tap Create PDF.'})}
+catch(e){o.busy=false;o.err=e.message||String(e);render()}}
 async function mkGo(){const o=V.pop;if(!o||o.k!='mk'||o.busy)return;const j=J(o.j),kind=o.kind,no=String(o.no||'').trim(),er=t=>{o.busy=false;o.err=t;render()};
 if(!no)return er('Add a number.');if(!/^\d{4}-\d\d-\d\d$/.test(o.date||''))return er('Add a date.');
 if(kind=='invoice'&&(S.jobs.some(x=>x.id!=j.id&&String(x.invNo||'').trim()==no)||ISS().some(x=>x.k=='invoice'&&x.no==no&&(x.j!=j.id||x.void))))return er('Invoice number '+no+' is already used. Each invoice needs its own number.');
@@ -1351,7 +1367,7 @@ const sec=(h,l,c,empty)=>`<h2 ${c?'style="color:var(--'+c+')"':''}>${h}${l.lengt
 return`<div class="row"><h1 style="margin:0">Monthly report</h1><span style="display:flex;gap:6px"><button class="x" style="font-size:16px" aria-label="Previous month" onclick="V.rm=shiftYm('${ym}',-1);render()">‹</button><button class="x" style="font-size:16px" aria-label="Next month" onclick="V.rm=shiftYm('${ym}',1);render()">›</button></span></div>
 <div class="mu" style="margin:2px 0 12px">${mName(ym)} · amounts excl. VAT${r.toInv.some(j=>r.val(j).est)?' · ≈ means estimated from equipment and tasks':''}</div>
 <div class="card grp gl">${[['Jobs',r.jobs.length,m(r.total)+' total'],['To invoice',r.toInv.length,m(r.toInvAmt)],['Invoiced, unpaid',r.unpaid.length,m(r.unpaidAmt)+' incl. VAT'],['Paid',r.paid.length,m(r.paidAmt)+' incl. VAT']].map(([l,v,s])=>`<div><div class="mu" style="font-size:12px">${l}</div><div style="font-size:16px;font-weight:600;margin:1px 0">${v}</div><div class="mu" style="font-size:12px">${s}</div></div>`).join('')}</div>
-<div style="display:flex;gap:8px;margin-top:10px"><button class="p" style="flex:1" onclick="reportPdf('${ym}')">Share as PDF</button><button style="flex:1" onclick="reportText('${ym}')">Copy as text</button></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="p" style="flex:1" onclick="reportPdf('${ym}')">Preview PDF</button><button style="flex:1" onclick="reportText('${ym}')">Copy as text</button></div>
 ${sec('To invoice',r.toInv,r.toInv.length?'wa':'','Everything from this month is invoiced.')}
 ${sec('Invoiced, awaiting payment',r.unpaid,'','Nothing outstanding.')}
 ${sec('Paid',r.paid,'','No payments received for this month yet.')}
@@ -1361,7 +1377,8 @@ function reportLines(ym){const r=monthReport(ym),f=j=>`${fd(j.date)}  ${jt(j)}${
 const g=(h,l)=>l.length?[h.toUpperCase(),...l.map(f),'']:[];
 return[`Monthly report · ${mName(ym)}`,`${r.jobs.length} jobs · ${m(r.total)} excl. VAT`,'',...g('To invoice ('+m(r.toInvAmt)+')',r.toInv),...g('Invoiced, awaiting payment',r.unpaid),...g('Paid',r.paid),...g('Not finished yet',r.open),...g('Older jobs still not invoiced',r.older)]}
 async function reportText(ym){const t=reportLines(ym).join('\n');try{if(navigator.share)await navigator.share({title:'Monthly report',text:t});else{await navigator.clipboard.writeText(t);toast('Copied.')}}catch(e){try{await navigator.clipboard.writeText(t);toast('Copied.')}catch(x){toast('Could not copy.')}}}
-async function reportPdf(ym){try{await pdfLibs()}catch(e){toast(e.message);return}const r=monthReport(ym),d=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+async function reportPdf(ym){const f=await reportFile(ym);if(f)pvOpen(f,{k:'pv',act:'report',title:'Monthly report · '+mName(ym),note:'Check it over, then share or save.'})}
+async function reportFile(ym){try{await pdfLibs()}catch(e){toast(e.message);return null}const r=monthReport(ym),d=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
 d.addFileToVFS('ev-r.ttf',EVT_FONT.r);d.addFont('ev-r.ttf','ev','normal');d.addFileToVFS('ev-b.ttf',EVT_FONT.b);d.addFont('ev-b.ttf','ev','bold');
 const L=18,R=192,INK=[27,27,26],MU=[118,117,111];let y=22;const T=(s,x,yy,op)=>{op=op||{};d.setFont('ev',op.b?'bold':'normal');d.setFontSize(op.s||9.5);d.setTextColor(...(op.c||INK));d.text(String(s),x,yy,{align:op.a||'left'})};
 const nl=(h)=>{if(y>275){d.addPage();y=22}};
@@ -1370,8 +1387,7 @@ const tiles=[['Jobs',r.jobs.length+' · '+m(r.total)],['To invoice',r.toInv.leng
 tiles.forEach(([a,b],i)=>{const x=L+(i%2)*87,yy=y+Math.floor(i/2)*8;T(a,x,yy,{c:MU,s:8.5});T(b,x,yy+4,{b:true})});y+=22;
 const grp=(h,l,c)=>{if(!l.length)return;nl();T(h.toUpperCase(),L,y,{b:true,s:8.5,c:c||MU});y+=5.5;l.forEach(j=>{nl();const v=r.val(j);T(fd(j.date),L,y,{c:MU,s:8.5});T(jt(j)+(j.event?'  ·  '+j.client:''),L+24,y,{});T((v.est?'≈ ':'')+m(v.net),R-30,y,{a:'right',b:true});T(stgName(j)+(j.invNo?' '+j.invNo:''),R,y,{a:'right',c:MU,s:8.5});y+=5.2});y+=5};
 grp('To invoice',r.toInv,[176,96,0]);grp('Invoiced, awaiting payment',r.unpaid);grp('Paid',r.paid);grp('Not finished yet',r.open);grp('Older jobs still not invoiced',r.older,[180,40,40]);
-const blob=d.output('blob'),fl=new File([blob],'report-'+ym+'.pdf',{type:'application/pdf'});
-if(navigator.share&&navigator.canShare&&navigator.canShare({files:[fl]}))navigator.share({files:[fl],title:'Monthly report '+mName(ym)}).catch(()=>{});else docDl(fl)}
+return new File([d.output('blob')],'report-'+ym+'.pdf',{type:'application/pdf'})}
 
 // ==== Prep checklist defaults editor ====
 function ptAdd(c,v){v=String(v||'').trim();if(!v)return;prepT()[c].push(['t'+Date.now().toString(36),v]);V.qaf='qt_'+c;render()}
