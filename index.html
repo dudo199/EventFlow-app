@@ -895,7 +895,7 @@ function availView(){if(!V.cm)V.cm=V.date.slice(0,7);
 const seg=[['cal','Calendar'],['day','Day']].map(([k,l])=>`<button class="${V.av==k?'p':''}" style="padding:4px 14px;font-size:13px" onclick="V.av='${k}';render()">${l}</button>`).join('');
 const [y,mo]=V.cm.split('-').map(Number),title=new Date(y,mo-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 const head=`<div class="row" style="margin-bottom:12px"><h1 style="margin:0">Calendar</h1><span style="display:flex;gap:6px">${seg}</span></div>`;
-if(V.av=='day')return head+`<input type="date" value="${V.date}" onchange="if(this.value){V.date=this.value;V.cm=this.value.slice(0,7)}render()">`+dayPanel(V.date);
+if(V.av=='day')return head+`<input type="date" value="${V.date}" onchange="if(this.value){V.date=this.value;V.cm=this.value.slice(0,7)}renderSoon()">`+dayPanel(V.date);
 return head+`<div class="card" style="padding:12px 10px 10px"><div class="row" style="margin:0 2px 10px"><b style="font-size:16px">${title}</b><span style="display:flex;gap:6px;align-items:center">${V.date==ld(new Date())&&V.cm==V.date.slice(0,7)?'':`<button class="x" style="width:auto;padding:2px 10px;font-size:13px" onclick="V.date=ld(new Date());V.cm=V.date.slice(0,7);render()">Today</button>`}<button class="x" style="font-size:16px" aria-label="Previous month" onclick="shiftMonth(-1)">‹</button><button class="x" style="font-size:16px" aria-label="Next month" onclick="shiftMonth(1)">›</button></span></div>`
 +calGrid()+`<div class="mu" style="margin:10px 2px 0;font-size:12px;display:flex;gap:14px;justify-content:center"><span><span class="dot" style="background:var(--tx);opacity:.55"></span>Job</span><span><span class="dot eq"></span>Equipment</span><span><span class="dot cr"></span>Crew</span><span><span class="dot cl"></span>Over-booked</span></div></div>`+dayPanel(V.date)}
 // ---- Search on list pages: 🔍 in the header opens a box; every word typed must appear somewhere in the row.
@@ -1568,6 +1568,8 @@ function preptView(){const T=prepT();return`<h1>Checklists</h1><div class="mu" s
 +lstEd('ms','Installation milestones','Your standard list. Once you have done a few installations, new jobs use what you usually set instead.',(S.msT&&S.msT.length?S.msT:MS_DEF.map(n=>({name:n}))).map((x,i)=>['m'+i,x.name]))
 +`<div style="text-align:center;margin-top:14px"><button style="font-size:12px;opacity:.6;border:0;background:none;color:var(--tx)" onclick="askDel('ptreset')">Reset all lists to the suggested defaults</button></div>`}
 
+// Re-render after the focused date picker closes (re-rendering under an open iOS picker freezes the screen).
+function renderSoon(){const a=document.activeElement;if(a&&a.type=='date'){if(!a._rs){a._rs=1;a.addEventListener('blur',()=>setTimeout(render,0),{once:true})}return}render()}
 // ==== Inline text edit (tap the text) ====
 function ied(t,j,id){if(SW.moved){SW.moved=false;return}if(SW.open){closeSw();return}kbdPrime();V.ied={t,j,id};V.qaf='ied';render();setTimeout(()=>{const e=document.getElementById('ied');if(e){e.focus();try{e.setSelectionRange(e.value.length,e.value.length)}catch(x){}}},30)}
 function iedSave(v){const o=V.ied;if(!o)return;V.ied=null;v=String(v||'').trim();if(o.t=='ms'){if(v)msSet(o.j,o.id,'name',v);else render()}else if(o.t=='prep'){if(v)prepRen(o.j,o.id,v);else render()}}
@@ -1593,11 +1595,13 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closes
 function pdAsk(o){let d=today();if(o.edit){if(o.t=='job')d=J(o.j).pDate||d;if(o.t=='stage')d=J(o.j).sched.find(y=>y.id==o.sid).recv||d;if(o.t=='crew')d=(S.payments.find(p=>p.id==o.pid)||{}).date||d}V.pop={k:'pdate',...o,d};render()}
 function pdSheet(top){const o=V.pop,j=o.j?J(o.j):null,x=o.t=='stage'?j.sched.find(y=>y.id==o.sid):null,p=o.t=='crew'?S.payments.find(y=>y.id==o.pid):null;
 const what=o.t=='job'?esc(jt(j))+' · '+m(jobTot(j)):o.t=='stage'?esc(x.label)+' · '+esc(jt(j))+' · '+m(schG(j,x)):p?m(p.amt)+' to '+esc((C(p.c)||{}).name||'crew'):'';
-const chip=(l,v)=>`<button style="width:auto;font-size:13px;padding:6px 12px;border-radius:99px" class="${o.d==v?'p':''}" onclick="V.pop.d='${v}';render()">${l}</button>`;
+const chip=(l,v)=>`<button style="width:auto;font-size:13px;padding:6px 12px;border-radius:99px" data-pd="${v}" class="${o.d==v?'p':''}" onclick="pdPick('${v}',1)">${l}</button>`;
 return top(o.t=='crew'?'When did you pay?':o.edit?'Change payment date':'When was it paid?')+`<div class="mu" style="margin-bottom:10px">${what}</div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${chip('Today',today())}${chip('Yesterday',hd(-1))}${chip('2 days ago',hd(-2))}</div>
-<label>Date</label><input type="date" value="${o.d}" onchange="V.pop.d=this.value||today();render()">
-<button class="p" style="width:100%;margin-top:12px" onclick="pdSave()">${o.edit?'Save date':o.t=='stage'?'Mark received '+fd(o.d):'Mark paid '+fd(o.d)}</button></div>`}
+<label>Date</label><input type="date" id="pdIn" value="${o.d}" oninput="pdPick(this.value)" onchange="pdPick(this.value)">
+<button class="p" id="pdBtn" style="width:100%;margin-top:12px" onclick="pdPick(document.getElementById('pdIn').value);pdSave()">${o.edit?'Save date':o.t=='stage'?'Mark received '+fd(o.d):'Mark paid '+fd(o.d)}</button></div>`}
+function pdPick(v,setIn){const o=V.pop;if(!o||o.k!='pdate')return;o.d=v||today();const b=document.getElementById('pdBtn'),i=document.getElementById('pdIn');if(setIn&&i)i.value=o.d;
+if(b)b.textContent=o.edit?'Save date':(o.t=='stage'?'Mark received ':'Mark paid ')+fd(o.d);document.querySelectorAll('[data-pd]').forEach(x=>x.classList.toggle('p',x.dataset.pd==o.d))}
 function pdSave(){const o=V.pop,d=o.d||today();V.pop=null;
 if(o.t=='job'){const j=J(o.j);if(o.edit){j.pDate=d;render();toast('Paid date set to '+fd(d)+'.');return}
 withUndo(o.j,'Marked paid '+fd(d)+'.',j=>{if(!j.iDate)j.iDate=d<today()?d:today();j.status='Paid';j.pDate=d});if(o.dv)try{openDv(o.j,'invoice')}catch(e){}return}
@@ -1665,7 +1669,7 @@ function msTog(jid,id){if(SW.moved){SW.moved=false;return}if(SW.open){closeSw();
 withUndo(jid,willAll?'Installation complete. It now counts in profit.':x0.done?'“'+x0.name+'” un-ticked.':'“'+x0.name+'” done.',j=>{const x=j.ms.find(y=>y.id==id);x.done=x.done?undefined:today();j.msAt=today();
 if(j.ms.every(y=>y.done)){j.finDate=today();if(stgIx(j)<3)stageTo(j,'Delivered')}else if(j.finDate){delete j.finDate;if(j.status=='Delivered')j.status='Confirmed'}})}
 function msDel(jid,id){withUndo(jid,'Milestone removed.',j=>{j.ms=j.ms.filter(y=>y.id!=id);(j.sched||[]).forEach(x=>{if(x.ms==id)delete x.ms})})}
-function msSet(jid,id,k,v){const x=J(jid).ms.find(y=>y.id==id);if(k=='w')v=+v||1;if(k=='name'){v=String(v).trim();if(!v)return}x[k]=v||undefined;render()}
+function msSet(jid,id,k,v){if(k=='due'||k=='done'){const x=J(jid).ms.find(y=>y.id==id);x[k]=v||undefined;save();renderSoon();return}const x=J(jid).ms.find(y=>y.id==id);if(k=='w')v=+v||1;if(k=='name'){v=String(v).trim();if(!v)return}x[k]=v||undefined;render()}
 function msSection(j){const L=j.ms||[],pc=msProg(j),nx=msNext(j),late=msLate(j),ed=V.mse==j.id;
 const prev=S.jobs.filter(x=>x.id!=j.id&&isInst(x)&&(x.ms||[]).length).sort((a,b)=>a.date<b.date?1:-1)[0];
 if(!L.length)return`<h2>Progress</h2><div class="card"><div class="mu" style="margin-bottom:8px">${(()=>{const L=msLearn(j);return L.src=='learned'?'Learned from your last '+L.n+' installations: '+L.list.map(x=>esc(x.name)).join(' → ')+'. ':''})()}Add the stages of this installation. Ticking them fills the progress bar; ticking the last one completes the job.</div><div style="display:flex;flex-wrap:wrap;gap:6px"><button class="p" style="width:auto;font-size:13px;padding:6px 12px;border-radius:99px" onclick="msFill(${j.id})">${(()=>{const L=msLearn(j);return L.src=='learned'?'Use my usual milestones':L.src=='mine'?'Use my standard list':'Use standard milestones'})()}</button>${prev?`<button style="width:auto;font-size:13px;padding:6px 12px;border-radius:99px" onclick="msFill(${j.id},${prev.id})">Copy from ${esc(jt(prev))}</button>`:''}</div>
