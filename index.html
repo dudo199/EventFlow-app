@@ -540,6 +540,7 @@ if(V.pop.k=='doc'){const o=V.pop,html=top(docTitle())+docReview()+'</div>',wide=
 const frame=o.url?`<div class="${wide?'pdfp':'pdfo'}">${wide?'':'<div class="row" style="padding:8px 12px"><b>Uploaded PDF</b><button class="x" onclick="V.pop.pdf=false;render()">✕</button></div>'}<iframe src="${o.url}" title="Uploaded PDF"></iframe><div class="mu" style="padding:6px 12px"><a href="${o.url}" target="_blank" rel="noopener" style="color:inherit">Open the PDF in a new tab</a></div></div>`:'';
 return wide?frame+html.replace('<div class="sheet">','<div class="sheet wide">'):html+(o.pdf?frame:'')}
 if(V.pop.k=='paste')return top('Paste document text')+pasteForm()+'</div>';
+if(V.pop.k=='dsrc')return top(V.pop.kind=='invoice'?'Add invoice PDF':V.pop.kind=='quote'?'Add quote PDF':'Import a PDF')+dsrcSheet();
 if(V.pop.k=='cnew')return top(V.pop.cl&&!V.pop.ve?'New client':V.pop.ve&&!V.pop.cl?'New vendor':'New contact')+`<div class="f"><div style="grid-column:1/-1"><label>Name</label><input id="ncn" value="${esc(V.pop.name||'')}"></div>
 <div>${chk(!!V.pop.cl,'','Client').replace('<input','<input id="ncc"')}</div><div>${chk(!!V.pop.ve,'','Vendor').replace('<input','<input id="ncv"')}</div>
 <div><label>Phone</label><input id="nph" type="tel"></div><div><label>Email</label><input id="nem" type="email"></div>
@@ -672,7 +673,28 @@ try{const b=await idbGet(o.j+':'+kd);const box=document.getElementById('dvbox');
 if(!b){box.innerHTML='<div class="mu">The PDF is no longer stored in this browser. Upload it again.</div>';return}
 _dvb=b;if(_dvu)URL.revokeObjectURL(_dvu);_dvu=URL.createObjectURL(b);box.classList.add('pvb');await pdfPaint(box,b,_dvu);
 }catch(e){const box=document.getElementById('dvbox');if(box)box.innerHTML='<div class="mu">Could not open the saved PDF.</div>'}}
-function pickDoc(jid,kind){DK={jid,kind};const f=document.getElementById('docf');f.value='';f.click()}
+function pickDoc(jid,kind){DK={jid,kind};V.pop={k:'dsrc',jid,kind};render();setTimeout(()=>{const z=document.getElementById('dpz');if(z)z.focus()},60)}
+document.addEventListener('paste',e=>{const a=document.activeElement;if(a&&(a.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(a.tagName)))return;const f=e.clipboardData&&pdfFromClip(e.clipboardData);if(!f)return;e.preventDefault();DK=V.tab=='jobs'&&V.job?{jid:V.job,kind:'auto'}:{jid:0,kind:'auto'};readDoc(f)});
+function pickFile(){const f=document.getElementById('docf');f.value='';V.pop=null;render();f.click()}
+// Paste a PDF: either the Paste button (Clipboard API) or a long-press → Paste in the paste box (paste event with files).
+function pdfFromClip(dt){const fs=[...(dt.files||[])];let f=fs.find(x=>x.type=='application/pdf'||/\.pdf$/i.test(x.name||''));
+if(!f)for(const it of [...(dt.items||[])]){if(it.kind=='file'&&(it.type=='application/pdf')){f=it.getAsFile();break}}
+return f?(f.name?f:new File([f],'pasted.pdf',{type:'application/pdf'})):null}
+function dpzPaste(e){e.preventDefault();const dt=e.clipboardData;if(!dt)return;const f=pdfFromClip(dt);if(f){V.pop=null;render();readDoc(f);return}
+const img=[...(dt.files||[])].find(x=>/^image\//.test(x.type)),tx=dt.getData('text/plain');
+if(tx&&tx.trim().length>20){V.pop={k:'paste',tgt:DK};render();setTimeout(()=>{const t=document.getElementById('ptx');if(t)t.value=tx},30);return}
+dpzMsg(img?'That is a picture, not a PDF. Copy the PDF file itself (Files → long-press → Copy).':'No PDF on the clipboard. In Files or Mail, long-press the PDF and tap Copy, then paste here.')}
+function dpzMsg(t){const m=document.getElementById('dpzm');if(m)m.textContent=t;const z=document.getElementById('dpz');if(z)z.textContent=''}
+async function docPaste(){try{if(!navigator.clipboard||!navigator.clipboard.read)throw 0;const items=await navigator.clipboard.read();
+for(const it of items){const t=it.types.find(x=>x=='application/pdf');if(t){const b=await it.getType(t);V.pop=null;render();readDoc(new File([b],'pasted.pdf',{type:'application/pdf'}));return}}
+for(const it of items){if(it.types.includes('text/plain')){const tx=await (await it.getType('text/plain')).text();if(tx.trim().length>20){V.pop={k:'paste',tgt:DK};render();setTimeout(()=>{const t=document.getElementById('ptx');if(t)t.value=tx},30);return}}}
+dpzMsg(items.some(it=>it.types.some(x=>/^image\//.test(x)))?'That is a picture, not a PDF. Copy the PDF file itself.':'No PDF on the clipboard. Long-press the box above and tap Paste, or choose the file.')}
+catch(e){dpzMsg('This phone did not allow reading the clipboard. Long-press the box above and tap Paste instead.')}}
+function dsrcSheet(){return`<div class="mu" style="margin-bottom:10px">Copy the PDF in Files, Mail or WhatsApp (long-press → Copy), then paste it here.</div>
+<div id="dpz" contenteditable="true" inputmode="none" onpaste="dpzPaste(event)" oninput="this.textContent=''" style="border:1.5px dashed var(--pri);border-radius:12px;padding:22px 12px;text-align:center;color:var(--mu);min-height:64px;outline:none;-webkit-user-select:text;user-select:text">Long-press here and tap <b style="color:var(--tx)">Paste</b></div>
+<div id="dpzm" class="mu" style="color:var(--wa);font-size:13px;margin:6px 0 0;min-height:18px"></div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><button class="p" style="padding:12px" onclick="docPaste()">Paste PDF</button><button style="padding:12px" onclick="pickFile()">Choose a file</button></div>
+<div style="margin-top:10px;font-size:13px"><a href="#" style="color:var(--mu)" onclick="event.preventDefault();V.pop={k:'paste',tgt:DK};render()">Paste the text instead</a></div></div>`}
 async function readDoc(f){if(!f||!DK)return;const tgt=DK;toast('Reading '+f.name+'…',0);
 try{if(!window.pdfjsLib)throw new Error('The PDF reader could not load here.');
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
